@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prototype: BTR tier nudge on Bag and checkout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F4F5F7; --surface:#FFFFFF; --surface-2:#F7F8F9; --text:#19222A; --text-2:#5B636B; --border:#E1E3E4;
+  --accent:#0072FF; --accent-text:#FFFFFF; --accent-weak:#E8F2FF; --code-bg:#F1F3F5; --code-text:#1F2A33;
+  --bezel:#0E1114;
+  --app-bg:#F1F2F2; --app-surface:#FFFFFF; --app-text:#19222A; --app-text-2:#5E646A; --app-border:#E1E3E4;
+  --app-blue:#0072FF; --app-green:#1C832A; --app-green-bg:#EFFCF0; --app-info-bg:#F3F9FF; --app-chip:#F1F2F2;
+  --app-icon-muted:#8E959B; --app-disabled:#B9C2CC; --app-toast-bg:#19222A; --app-toast-text:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0E1216; --surface:#161B20; --surface-2:#1C2228; --text:#E7EAEC; --text-2:#A2AAB2; --border:#2A3239;
+    --accent:#4D9BFF; --accent-text:#06121F; --accent-weak:#132A44; --code-bg:#0F1418; --code-text:#D7DEE4;
+    --bezel:#000000;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0E1216; --surface:#161B20; --surface-2:#1C2228; --text:#E7EAEC; --text-2:#A2AAB2; --border:#2A3239;
+  --accent:#4D9BFF; --accent-text:#06121F; --accent-weak:#132A44; --code-bg:#0F1418; --code-text:#D7DEE4;
+  --bezel:#000000;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.45}
+button{font:inherit}
+
+/* ---------- page layout ---------- */
+.wrap{max-width:1220px;margin:0 auto;padding:24px 20px 48px;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:28px;align-items:start}
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+.p-head{display:flex;flex-direction:column;gap:6px;padding:4px 2px 6px}
+.eyebrow{margin:0;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}
+h1{margin:0;font-size:24px;line-height:1.25;font-weight:700}
+.lede{margin:0;color:var(--text-2);max-width:62ch}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card h2{margin:0;font-size:15px;line-height:1.3;font-weight:700}
+.scen{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.sc{text-align:left;border:1px solid var(--border);background:var(--surface-2);color:var(--text);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-height:44px}
+.sc:hover{border-color:var(--accent)}
+.sc[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-weak)}
+.sc-case{font-size:12px;font-weight:600;color:var(--text-2)}
+.sc-l{font-weight:600}
+.hint{margin:0;font-size:13px;color:var(--text-2)}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--text-2)}
+.f input:not([type="range"]),.f select{font:inherit;font-size:14px;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;min-height:40px;width:100%}
+.f input[type="range"]{accent-color:var(--accent);width:100%;min-height:32px}
+.f output{color:var(--text);font-weight:600;margin-left:4px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface-2);align-self:flex-start}
+.seg button{border:0;background:none;color:var(--text);padding:9px 14px;cursor:pointer;min-height:40px;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-text);font-weight:600}
+.formula{margin:0;font-size:13px;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.tablewrap{overflow-x:auto}
+table.cut{width:100%;border-collapse:collapse;font-size:13px}
+table.cut th,table.cut td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.cut th{color:var(--text-2);font-weight:600}
+table.cut tr.on td{background:var(--accent-weak);font-weight:600}
+.tog{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);min-height:32px;cursor:pointer}
+.tog input{width:18px;height:18px;accent-color:var(--accent);margin:0}
+.cap{margin:0;font-size:12px;font-weight:600;color:var(--text-2)}
+pre{margin:0;background:var(--code-bg);color:var(--code-text);border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto;white-space:pre}
+.foot{margin:0;font-size:12px;color:var(--text-2)}
+
+.stage{display:flex;flex-direction:column;align-items:center;gap:12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
+.seg.big{align-self:center}
+.seg.big button{padding:9px 22px;font-size:14px}
+.phone{width:390px;max-width:100%;height:clamp(560px,calc(100vh - 150px),844px);background:var(--bezel);border-radius:46px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.state{margin:0;font-size:13px;color:var(--text-2);text-align:center;max-width:390px;min-height:38px}
+
+@media (max-width: 920px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  .stage{position:static;order:-1}
+  .phone{height:min(780px,calc(100vh - 120px))}
+}
+
+/* ---------- phone app (always light, like the real app) ---------- */
+.screen{position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:var(--app-bg);color:var(--app-text);font-size:14px;line-height:18px}
+#app{position:absolute;inset:0}
+.app{position:absolute;inset:0;display:flex;flex-direction:column}
+.app p{margin:0}
+.a-head{background:var(--app-surface);padding:14px 16px 0;display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.a-head-top{position:relative;display:flex;justify-content:center;align-items:center;height:40px}
+.pill{display:flex;align-items:center;gap:6px;border:1px solid var(--app-border);border-radius:999px;padding:8px 14px;background:var(--app-surface);color:var(--app-text)}
+.pill svg{color:var(--app-blue)}
+.icon-btn{position:absolute;right:-8px;width:44px;height:44px;border:0;background:none;display:grid;place-items:center;color:var(--app-text);cursor:pointer}
+.tabs{display:flex;gap:24px}
+.tab{font-size:16px;line-height:20px;padding:8px 0 10px;color:var(--app-text-2)}
+.tab.on{color:var(--app-blue);font-weight:600;box-shadow:inset 0 -2px 0 var(--app-blue)}
+.scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:10px}
+.a-ship{display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--app-green-bg);flex-shrink:0}
+.a-ship svg{color:var(--app-green);flex-shrink:0}
+.a-card{background:var(--app-surface);flex-shrink:0}
+.a-wh{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--app-bg)}
+.a-wh .t{font-weight:600}
+.s{font-size:12px;line-height:16px;color:var(--app-text-2)}
+.a-group{padding:12px 16px;border-bottom:1px solid var(--app-bg);display:flex;flex-direction:column;gap:12px}
+.a-seller{font-weight:600}
+.a-item{display:flex;gap:12px;align-items:flex-start}
+.a-cb{width:20px;height:20px;margin:26px 0 0;accent-color:var(--app-blue);flex-shrink:0;cursor:pointer}
+.a-cb-static{width:20px;height:20px;margin:0;accent-color:var(--app-blue)}
+.a-thumb{width:72px;height:72px;border-radius:8px;background:var(--app-chip);display:grid;place-items:center;color:var(--app-icon-muted);flex-shrink:0}
+.a-thumb.sm{width:56px;height:56px}
+.a-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.a-orig{font-size:12px;line-height:16px;color:var(--app-text-2);text-decoration:line-through}
+.a-pr{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.a-price{font-weight:700;color:var(--app-blue)}
+.a-price .per{font-size:12px;font-weight:400;color:var(--app-text-2)}
+.step{display:flex;align-items:center;border:1px solid #C8CBCD;border-radius:8px;height:32px;flex-shrink:0}
+.step button{width:36px;height:32px;border:0;background:none;display:grid;place-items:center;color:var(--app-text-2);cursor:pointer}
+.step button:last-child{color:var(--app-blue)}
+.step span{width:22px;text-align:center}
+.a-more{display:flex;align-items:center;gap:12px;padding:4px 16px}
+.a-more>div{flex:1}
+.a-more .t{font-weight:600}
+.a-link{border:0;background:none;color:var(--app-blue);font-weight:600;padding:12px 0;cursor:pointer}
+.empty{padding:24px 16px;text-align:center;color:var(--app-text-2)}
+
+.dock{flex-shrink:0;box-shadow:0 -2px 12px rgba(0,0,0,.12);background:var(--app-surface);position:relative;z-index:1}
+.dock-body{padding:10px 16px;display:flex;flex-direction:column;gap:10px}
+.promo{border:1px solid var(--app-border);border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.promo .ok{width:32px;height:32px;border-radius:999px;background:#D6F7DA;color:var(--app-green);display:grid;place-items:center;flex-shrink:0}
+.promo .txt{flex:1;display:flex;flex-direction:column;gap:4px}
+.promo .ttl{font-size:12px;line-height:16px;font-weight:600}
+.chips{display:flex;gap:6px}
+.chip{font-size:12px;line-height:16px;font-weight:600;border-radius:4px;padding:1px 6px}
+.chip.b{color:var(--app-blue);background:#E1F1FF}
+.chip.g{color:var(--app-green);background:#D6F7DA}
+.promo>svg{color:var(--app-blue)}
+.totalrow{display:flex;align-items:center;gap:12px}
+.all{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;line-height:16px;color:var(--app-text-2);cursor:pointer}
+.tot{flex:1;display:flex;flex-direction:column;border-left:1px solid var(--app-border);padding-left:12px;min-width:0}
+.tl{font-weight:600}
+.tv{font-size:18px;line-height:24px;font-weight:700}
+.btn-primary{font-size:16px;font-weight:600;color:#FFFFFF;background:var(--app-blue);border:0;border-radius:999px;height:48px;padding:0 22px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
+.btn-primary:disabled{background:var(--app-disabled);cursor:not-allowed}
+.btn-primary.block{width:100%}
+.a-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 0 10px;background:var(--app-surface);border-top:1px solid var(--app-bg);flex-shrink:0}
+.a-nav span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;line-height:14px;color:var(--app-text-2)}
+.a-nav span.on{color:var(--app-blue);font-weight:600}
+
+/* checkout */
+.c-head{display:flex;align-items:center;gap:4px;padding:6px 16px 6px 4px;background:var(--app-surface);border-bottom:1px solid var(--app-border);flex-shrink:0}
+.c-head h2{margin:0;font-size:18px;line-height:24px;font-weight:600}
+.back{width:44px;height:44px;border:0;background:none;display:grid;place-items:center;color:var(--app-text-2);cursor:pointer}
+.c-addr{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;background:var(--app-surface);flex-shrink:0}
+.c-addr>div{flex:1;display:flex;flex-direction:column;gap:2px}
+.c-addr .t{font-weight:600}
+.c-group{padding:12px 16px;display:flex;flex-direction:column;gap:12px}
+.c-sh{display:flex;flex-direction:column;gap:2px;padding-bottom:10px;border-bottom:1px solid var(--app-border)}
+.c-sh .t{font-weight:600}
+.retur{align-self:flex-start;font-size:11px;line-height:14px;color:var(--app-text-2);border:1px solid #C8CBCD;border-radius:4px;padding:2px 6px}
+.c-row{padding:12px 16px}
+.vrow{display:flex;align-items:center;gap:12px;border:1px solid var(--app-border);border-radius:12px;padding:12px;cursor:pointer}
+.vrow .vi{color:var(--app-blue);display:grid;place-items:center}
+.vrow .vt{flex:1;display:flex;flex-direction:column;gap:2px}
+.vrow .vt b{font-weight:600}
+.vrow input{width:20px;height:20px;accent-color:var(--app-blue);margin:0}
+.shipcard{border:1px solid var(--app-border);border-radius:12px;overflow:hidden}
+.shipcard .hd{padding:12px;display:flex;flex-direction:column;gap:4px}
+.shipcard .hd .r{display:flex;justify-content:space-between;align-items:center}
+.shipcard .hd .r b{font-weight:600}
+.shipcard .hd .r span{color:var(--app-blue);font-weight:600}
+.green{color:var(--app-green);font-size:12px;line-height:16px}
+.opt{padding:12px;display:flex;flex-direction:column;gap:4px}
+.opt.on{background:var(--app-info-bg);border-top:1px solid #BFDDFF;border-bottom:1px solid #BFDDFF}
+.opt .r{display:flex;align-items:center;gap:8px}
+.opt .r b{font-weight:600}
+.opt .strike{font-size:12px;color:var(--app-text-2);text-decoration:line-through}
+.opt .free{font-weight:600;color:var(--app-green)}
+.radio{width:20px;height:20px;border-radius:999px;border:2px solid #9AA0A6;flex-shrink:0}
+.radio.on{border-color:var(--app-blue);box-shadow:inset 0 0 0 4px #FFFFFF;background:var(--app-blue)}
+.fast{font-size:11px;line-height:14px;color:var(--app-blue);background:#E1F1FF;border-radius:4px;padding:2px 6px}
+.c-reco{padding:12px 0 14px;display:flex;flex-direction:column;gap:10px}
+.c-reco .rt{font-weight:600;padding:0 16px}
+.reco-row{display:flex;gap:10px;overflow-x:auto;padding:0 16px 2px}
+.reco{flex:0 0 250px;border:1px solid var(--app-border);border-radius:12px;padding:10px;display:flex;gap:10px;align-items:center}
+.reco .ri{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.reco .rn{font-size:12px;line-height:16px}
+.reco .rp{font-weight:700}
+.tag{align-self:flex-start;font-size:11px;line-height:14px;font-weight:600;color:#6B4A0B;background:#F7EEDB;border-radius:4px;padding:2px 6px}
+.add{width:44px;height:44px;border:1.5px solid var(--app-blue);border-radius:999px;background:var(--app-surface);color:var(--app-blue);display:grid;place-items:center;flex-shrink:0;cursor:pointer}
+.reco-done{padding:0 16px;font-size:12px;color:var(--app-text-2)}
+.pts-line{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--app-info-bg);color:var(--app-blue)}
+.pts-line strong{font-weight:600}
+.c-total{display:flex;align-items:center;gap:12px;padding:10px 16px 14px}
+.c-total>div{flex:1;display:flex;flex-direction:column}
+.orig{font-size:12px;line-height:16px;color:var(--app-text-2);text-decoration:line-through}
+
+/* tier strip */
+.tier-gold{--s-bg:linear-gradient(115deg,#E2B84B 0%,#F6E2A6 100%);--s-text:#2B1F05;--s-accent:#5C3D05;--s-sub:rgba(43,31,5,.85);--s-fill:#7A5208;--s-track:rgba(43,31,5,.15);--s-stripe:rgba(122,82,8,.35);--s-icon:#5C3D05}
+.tier-platinum{--s-bg:linear-gradient(115deg,#1E1F23 0%,#4A4C55 100%);--s-text:#FFFFFF;--s-accent:#DADDE5;--s-sub:rgba(255,255,255,.85);--s-fill:#DADDE5;--s-track:rgba(255,255,255,.18);--s-stripe:rgba(218,221,229,.4);--s-icon:#DADDE5}
+.tier-diamond{--s-bg:linear-gradient(115deg,#0A1D57 0%,#173A99 100%);--s-text:#FFFFFF;--s-accent:#F4E2B0;--s-sub:rgba(255,255,255,.85);--s-fill:#F4E2B0;--s-track:rgba(255,255,255,.18);--s-stripe:rgba(244,226,176,.4);--s-icon:#BFD3FF}
+.strip{display:flex;flex-direction:column;width:100%;border:0;margin:0;padding:0;background:var(--s-bg);color:var(--s-text);text-align:left;cursor:pointer;animation:stripIn .25s ease-out}
+@keyframes stripIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.strip{animation:none}.toast{transition:none}}
+.strip-row{display:flex;align-items:center;gap:8px;padding:12px 12px 10px 16px;font-size:14px;line-height:18px;font-weight:600}
+.strip-text{flex:1;min-width:0}
+.strip b{color:var(--s-accent);font-weight:700}
+.strip .ti{stroke:var(--s-icon);flex-shrink:0}
+.strip .chev{stroke:var(--s-sub);flex-shrink:0}
+.strip-pts{display:flex;align-items:center;gap:8px;padding:10px 12px 0 16px;font-size:12px;line-height:16px;color:var(--s-sub)}
+.strip-pts b{color:var(--s-text);font-weight:600}
+.strip-pts svg{flex-shrink:0}
+.merged .strip-row{padding-top:6px}
+.bar{display:flex;height:4px;background:var(--s-track)}
+.bar-c{background:var(--s-fill);min-width:0;flex:0 1 auto}
+.bar-o{flex:0 0 auto;min-width:6px;background:repeating-linear-gradient(135deg,var(--s-fill) 0 3px,var(--s-stripe) 3px 6px)}
+.bar-r{flex:1 0 6px}
+
+/* sheet + toast */
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--app-surface);width:100%;border-radius:16px 16px 0 0;padding:8px 16px 20px;display:flex;flex-direction:column;gap:12px}
+.grab{width:40px;height:4px;border-radius:2px;background:#D5D8DA;align-self:center}
+.sheet h3{margin:4px 0 0;font-size:18px;line-height:24px;font-weight:600}
+.sr{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--app-bg)}
+.sr span{color:var(--app-text-2)}
+.sr b{font-weight:600}
+.sr.ok b{color:var(--app-green)}
+.note{font-size:12px;line-height:16px;color:var(--app-text-2)}
+.toast{position:absolute;left:16px;right:16px;bottom:150px;background:var(--app-toast-bg);color:var(--app-toast-text);border-radius:10px;padding:10px 14px;font-size:13px;line-height:18px;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:6}
+.toast.show{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="panel" aria-label="Controls">
+    <header class="p-head">
+      <p class="eyebrow">ULP × CECP prototype</p>
+      <h1>BTR tier nudge on Bag and checkout</h1>
+      <p class="lede">Pick a case, then play with the cart: select items, change quantity, add from the carousel, turn on the voucher. The strip, the Neo response and the cutoff update live. Median order values come from ROME-39752 (Blibli shoppers).</p>
+    </header>
+
+    <div class="card">
+      <h2>Cases</h2>
+      <div class="scen" id="scen"></div>
+      <p class="hint" id="hint"></p>
+    </div>
+
+    <div class="card">
+      <h2>Customer</h2>
+      <div class="fields">
+        <label class="f"><span>Current tier</span>
+          <select id="f-tier">
+            <option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option>
+          </select>
+        </label>
+        <label class="f"><span>Spend counted this year (Rp)</span><input id="f-counted" inputmode="numeric" autocomplete="off"></label>
+        <label class="f"><span>Transactions counted</span><input id="f-trx" type="number" min="0" step="1"></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Show rule</h2>
+      <p class="formula">Cutoff = N × factor × median Blibli order value of the tier. The nudge shows when the gap after this order is within the cutoff.</p>
+      <div class="fields">
+        <div class="f"><span id="n-lab">N (usual orders)</span>
+          <div class="seg" role="group" aria-labelledby="n-lab" id="seg-n">
+            <button type="button" data-n="1">1</button><button type="button" data-n="2">2</button><button type="button" data-n="3">3</button>
+          </div>
+        </div>
+        <label class="f"><span>Factor<output id="f-factor-out" for="f-factor"></output></span>
+          <input type="range" id="f-factor" min="0.5" max="1" step="0.1">
+        </label>
+      </div>
+      <div class="tablewrap">
+        <table class="cut">
+          <thead><tr><th>Target</th><th>Median order</th><th>Cutoff</th></tr></thead>
+          <tbody id="cut-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Open options</h2>
+      <div class="f"><span id="c5-lab">Case 5 message [OPEN]</span>
+        <div class="seg" role="group" aria-labelledby="c5-lab" id="seg-c5">
+          <button type="button" data-c5="A">A: unlock the tier reached</button><button type="button" data-c5="B">B: gap to the next tier</button>
+        </div>
+      </div>
+      <label class="tog"><input type="checkbox" id="f-p2"><span>P2: tag carousel items that close the gap</span></label>
+      <label class="tog"><input type="checkbox" id="f-timeout"><span>Simulate Neo timeout</span></label>
+    </div>
+
+    <div class="card">
+      <h2>Neo call</h2>
+      <p class="cap">CECP sends</p>
+      <pre id="neo-req"></pre>
+      <p class="cap">Neo returns</p>
+      <pre id="neo-res"></pre>
+      <p class="foot">Order amount is the cart total on Bag and the final paid amount after all discounts at checkout. Assumption: one checkout counts as one transaction (still an open question for multi-seller orders).</p>
+    </div>
+  </section>
+
+  <section class="stage" aria-label="Prototype">
+    <div class="seg big" role="group" aria-label="Page" id="seg-page">
+      <button type="button" data-page="bag">Bag</button><button type="button" data-page="checkout">Checkout</button>
+    </div>
+    <div class="phone">
+      <div class="screen">
+        <div id="app"></div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <p class="state" id="state" aria-live="polite"></p>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- rules and data ---------- */
+  const TIERS = [
+    {name:"Silver",   spend:0,        trx:0},
+    {name:"Gold",     spend:500000,   trx:10},
+    {name:"Platinum", spend:10000000, trx:30},
+    {name:"Diamond",  spend:25000000, trx:60}
+  ];
+  const MEDIAN = {Gold:73093, Platinum:456960, Diamond:1067833};      // keyed by target tier (ROME-39752)
+  const PATH   = {Gold:"Silver → Gold", Platinum:"Gold → Platinum", Diamond:"Platinum → Diamond"};
+  const PAL    = {Gold:"gold", Platinum:"platinum", Diamond:"diamond"};
+  const CITY   = {"Toko Elektronik Resmi":"Kota Jakarta Utara","Toko Peralatan Rumah":"Kota Tangerang","Toko Dapur Sehat":"Kota Jakarta Barat"};
+
+  const BASE_ITEMS = [
+    {id:"airfryer",  seller:"Toko Elektronik Resmi", name:"Air fryer digital 5,5 L",              price:1249000, orig:1599000},
+    {id:"vacuum",    seller:"Toko Peralatan Rumah",  name:"Robot vacuum cleaner",                 price:1751000, orig:2299000},
+    {id:"ricecooker",seller:"Toko Dapur Sehat",      name:"Rice cooker digital 1,8 L",            price:689000,  orig:0},
+    {id:"tv",        seller:"Toko Elektronik Resmi", name:"Smart TV 55 inci 4K",                  price:6600000, orig:7999000},
+    {id:"paper",     seller:"Toko Dapur Sehat",      name:"Kertas baking air fryer, 100 lembar",  price:45000,   orig:59000},
+    {id:"rack",      seller:"Toko Elektronik Resmi", name:"Rak panggang air fryer",               price:129000,  orig:159000, reco:true},
+    {id:"filter",    seller:"Toko Peralatan Rumah",  name:"Filter HEPA robot vacuum, isi 2",      price:189000,  orig:229000, reco:true},
+    {id:"spatula",   seller:"Toko Dapur Sehat",      name:"Spatula silikon tahan panas",          price:35000,   orig:0,      reco:true}
+  ];
+
+  const SCEN = [
+    {id:"s1", c:"Case 1", l:"Close to Diamond", tier:"Platinum", counted:21500000, trx:34, sel:["airfryer","vacuum"],
+     hint:"Gap after this order is Rp 500.000. Try: select the rice cooker in Bag (it flips to “Selesaikan pesanan ini”), or go to checkout and turn on the voucher (the gap grows because checkout uses the final paid amount)."},
+    {id:"s2", c:"Case 2", l:"This order unlocks Diamond", tier:"Platinum", counted:22200000, trx:34, sel:["airfryer","vacuum"],
+     hint:"The cart already takes them past Rp 25.000.000. Try: unselect the air fryer to drop back to a gap."},
+    {id:"s3", c:"Case 3", l:"Too far: no nudge", tier:"Platinum", counted:15000000, trx:34, sel:["airfryer","vacuum"],
+     hint:"Gap is Rp 7.000.000, above the cutoff, so nothing shows. Try: select the Smart TV, or raise N."},
+    {id:"s4", c:"Case 4", l:"Already Diamond", tier:"Diamond", counted:26000000, trx:70, sel:["airfryer","vacuum"],
+     hint:"Diamond customers see nothing in MVP (Keep Diamond is out of scope)."},
+    {id:"s5", c:"Case 5", l:"Reaches Gold, close to Platinum", tier:"Silver", counted:0, trx:2, sel:["airfryer","vacuum","tv"],
+     hint:"This order takes a Silver customer past Gold and leaves Rp 400.000 to Platinum. Try: switch the case 5 message between A and B."},
+    {id:"s6", c:"Case 6", l:"Last transaction needed", tier:"Silver", counted:200000, trx:9, sel:["paper"],
+     hint:"The spend gap (Rp 255.000) is above the cutoff, but this order is their 10th transaction, so they reach Gold anyway. The copy never mentions transactions."},
+    {id:"s7", c:"Case 1", l:"Close to Gold", tier:"Silver", counted:400000, trx:4, sel:["paper"],
+     hint:"Gap after this order is Rp 55.000, within the Silver → Gold cutoff. Try: increase the quantity."},
+    {id:"s8", c:"Case 1", l:"Close to Platinum", tier:"Gold", counted:9000000, trx:18, sel:["ricecooker"],
+     hint:"Gap after this order is Rp 311.000, within the Gold → Platinum cutoff. Try: go to checkout and add the air fryer rack from the carousel."},
+    {id:"s9", c:"Error", l:"Neo times out", tier:"Platinum", counted:21500000, trx:34, sel:["airfryer","vacuum"], timeout:true,
+     hint:"Neo doesn’t answer in time, so CECP hides the strip. Checkout still shows the normal points line."}
+  ];
+
+  const state = {scenario:"s1", tier:"Platinum", counted:21500000, trx:34, N:1, factor:1, case5:"A",
+                 p2:false, timeout:false, voucher:false, page:"bag", sheet:false};
+  let items = [];
+
+  /* ---------- helpers ---------- */
+  const $ = s => document.querySelector(s);
+  const rp = n => "Rp\u00A0" + Math.round(n).toLocaleString("id-ID");
+  const num = n => Number(n).toLocaleString("id-ID");
+  const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+  const groupBySeller = list => {
+    const g = [];
+    list.forEach(i => { let e = g.find(x => x.seller === i.seller); if (!e) { e = {seller:i.seller, items:[]}; g.push(e); } e.items.push(i); });
+    return g;
+  };
+  function resetItems(sel){
+    items = BASE_ITEMS.map(b => ({...b, inBag:!b.reco, sel:sel.includes(b.id), qty:1}));
+  }
+  const selected = () => items.filter(i => i.inBag && i.sel);
+  const bagAmount = () => sum(selected(), i => i.price * i.qty);
+  const voucherAmount = () => state.voucher ? Math.min(100000, bagAmount()) : 0;
+  const checkoutAmount = () => bagAmount() - voucherAmount();
+  const origAmount = () => sum(selected(), i => (i.orig || i.price) * i.qty);
+  const cutoffFor = t => state.N * state.factor * MEDIAN[t];
+
+  /* ---------- Neo logic (what ULP would run) ---------- */
+  function progress(type, target, amount){
+    const T = target.spend;
+    const c = Math.min(state.counted / T, 1) * 100;
+    const o = type === "unlock" ? 100 - c : Math.min(amount / T * 100, 100 - c);
+    return {c:+c.toFixed(1), o:+Math.max(o, 0).toFixed(1)};
+  }
+  function evaluate(amount){
+    if (state.timeout) return {messageType:"error", kase:"error"};
+    const ci = TIERS.findIndex(t => t.name === state.tier);
+    if (ci === 3) return {messageType:"none", kase:"case4"};
+    const after = state.counted + amount;
+    const trxAfter = state.trx + 1;
+
+    let reached = -1, reason = null;
+    for (let i = 3; i > ci; i--) {
+      if (after >= TIERS[i].spend) { reached = i; reason = "spend"; break; }
+      if (trxAfter >= TIERS[i].trx) { reached = i; reason = "transactions"; break; }
+    }
+
+    if (reached > -1) {
+      const rt = TIERS[reached];
+      if (reached < 3) {
+        const nt = TIERS[reached + 1];
+        const gap2 = nt.spend - after, c2 = cutoffFor(nt.name);
+        if (gap2 > 0 && gap2 <= c2) {
+          if (state.case5 === "B") {
+            const p = progress("gap", nt, amount);
+            return {messageType:"gap", targetTier:nt.name, remainingSpend:gap2, progressCounted:p.c, progressThisOrder:p.o,
+                    kase:"case5", reached:rt.name, gapNext:gap2, cutoffNext:c2};
+          }
+          const p = progress("unlock", rt, amount);
+          return {messageType:"unlock", targetTier:rt.name, remainingSpend:0, progressCounted:p.c, progressThisOrder:p.o,
+                  kase:"case5", reached:rt.name, next:nt.name, gapNext:gap2, cutoffNext:c2, reason};
+        }
+      }
+      const p = progress("unlock", rt, amount);
+      return {messageType:"unlock", targetTier:rt.name, remainingSpend:0, progressCounted:p.c, progressThisOrder:p.o,
+              kase: reason === "transactions" ? "case6" : "case2", reason};
+    }
+
+    const nt = TIERS[ci + 1];
+    const gap = nt.spend - after, c = cutoffFor(nt.name);
+    if (gap <= c) {
+      const p = progress("gap", nt, amount);
+      return {messageType:"gap", targetTier:nt.name, remainingSpend:gap, progressCounted:p.c, progressThisOrder:p.o, kase:"case1", cutoff:c};
+    }
+    return {messageType:"none", targetTier:nt.name, remainingSpend:gap, kase:"case3", cutoff:c};
+  }
+  const shows = r => r.messageType === "gap" || r.messageType === "unlock";
+
+  /* ---------- icons ---------- */
+  const sv = (w, body, extra) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra||""}>${body}</svg>`;
+  const I = {
+    box:   sv(26, '<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>', 'stroke-width="1.5"'),
+    trash: sv(16, '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'),
+    minus: sv(16, '<path d="M5 12h14"/>', 'stroke-width="2"'),
+    plus:  sv(16, '<path d="M12 5v14M5 12h14"/>', 'stroke-width="2"'),
+    plusL: sv(18, '<path d="M12 5v14M5 12h14"/>', 'stroke-width="2"'),
+    down:  sv(16, '<path d="M6 9l6 6 6-6"/>', 'stroke-width="2"'),
+    right: sv(16, '<path d="M9 6l6 6-6 6"/>', 'stroke-width="2"'),
+    up:    sv(14, '<path d="M6 15l6-6 6 6"/>', 'stroke-width="2"'),
+    heart: sv(22, '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>'),
+    truck: sv(20, '<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.5"/><circle cx="17" cy="17.5" r="1.5"/>'),
+    check: sv(18, '<path d="M5 12l5 5 9-10"/>', 'stroke-width="2.2"'),
+    back:  sv(24, '<path d="M19 12H5M11 6l-6 6 6 6"/>', 'stroke-width="2"'),
+    pin:   '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>',
+    ticket:sv(20, '<path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 7v10" stroke-dasharray="2 2"/>'),
+    shield:sv(20, '<path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>', 'stroke-width="2"'),
+    pts:   (fill, mark) => `<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="${fill}" d="M12 2l2.4 1.8 3 .1.9 2.8 2.4 1.8-.9 2.9.9 2.9-2.4 1.8-.9 2.8-3 .1L12 22l-2.4-1.8-3-.1-.9-2.8-2.4-1.8.9-2.9-.9-2.9 2.4-1.8.9-2.8 3-.1z"/><path d="M9 15l6-6" stroke="${mark}" stroke-width="2" stroke-linecap="round"/><circle cx="9.5" cy="9.5" r="1.2" fill="${mark}"/><circle cx="14.5" cy="14.5" r="1.2" fill="${mark}"/></svg>`,
+    home:  sv(22, '<path d="M3 11l9-7 9 7v9H4z"/>'),
+    video: sv(22, '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M10 9.5v5l4.5-2.5z"/>'),
+    bag:   sv(22, '<path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8a3 3 0 0 1 6 0"/>'),
+    order: sv(22, '<path d="M4 8h16v12H4z"/><path d="M4 8l2-4h12l2 4M10 12h4"/>'),
+    user:  sv(22, '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>')
+  };
+  const tierIcon = t => {
+    const body = t === "Diamond" ? '<path d="M6 3h12l4 6-10 12L2 9l4-6z"/><path d="M2 9h20M12 21L8 9l4-6 4 6-4 12"/>'
+               : t === "Platinum" ? '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z"/>'
+               : '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>';
+    return `<svg class="ti" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  };
+  const chev = '<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+
+  /* ---------- strip ---------- */
+  function barHTML(r){
+    const rest = r.messageType === "gap" ? '<span class="bar-r"></span>' : '';
+    return `<span class="bar" aria-hidden="true"><span class="bar-c" style="width:${r.progressCounted}%"></span><span class="bar-o" style="width:${r.progressThisOrder}%"></span>${rest}</span>`;
+  }
+  function stripRow(r){
+    const t = r.targetTier;
+    const text = r.messageType === "gap"
+      ? `Belanja <b>${rp(r.remainingSpend)}</b> lagi, kamu naik ke ${t}`
+      : `Selesaikan pesanan ini, kamu naik ke <b>${t}</b>`;
+    return `<span class="strip-row">${tierIcon(t)}<span class="strip-text">${text}</span>${chev}</span>`;
+  }
+  function stripBag(r){
+    if (!shows(r)) return "";
+    return `<button type="button" class="strip tier-${PAL[r.targetTier]}" data-act="sheet" aria-haspopup="dialog">${stripRow(r)}${barHTML(r)}</button>`;
+  }
+  function ptsText(saving, points, tag){
+    const p = `<${tag}>${num(points)} poin</${tag}>`;
+    return saving > 0 ? `Hemat <${tag}>${rp(saving)}</${tag}> dan dapat ${p}` : `Dapat ${p}`;
+  }
+  function stripCheckout(r, saving, points){
+    if (!shows(r)) return `<div class="pts-line">${I.pts("#0072FF", "#FFFFFF")}<span>${ptsText(saving, points, "strong")}</span></div>`;
+    const pal = PAL[r.targetTier];
+    const fill = pal === "gold" ? "#5C3D05" : "#BFD3FF", mark = pal === "gold" ? "#F6E2A6" : (pal === "platinum" ? "#1E1F23" : "#0A1D57");
+    return `<button type="button" class="strip merged tier-${pal}" data-act="sheet" aria-haspopup="dialog"><span class="strip-pts">${I.pts(fill, mark)}<span>${ptsText(saving, points, "b")}</span></span>${stripRow(r)}${barHTML(r)}</button>`;
+  }
+
+  /* ---------- Bag ---------- */
+  function stepper(i){
+    const minus = i.qty > 1 ? I.minus : I.trash;
+    const lab = i.qty > 1 ? `Kurangi ${i.name}` : `Hapus ${i.name}`;
+    return `<div class="step"><button type="button" data-act="minus" data-id="${i.id}" aria-label="${lab}">${minus}</button><span>${i.qty}</span><button type="button" data-act="plus" data-id="${i.id}" aria-label="Tambah jumlah ${i.name}">${I.plus}</button></div>`;
+  }
+  function bagItem(i){
+    return `<div class="a-item">
+      <input type="checkbox" class="a-cb" data-act="sel" data-id="${i.id}" ${i.sel ? "checked" : ""} aria-label="Pilih ${i.name}">
+      <div class="a-thumb" role="img" aria-label="Foto produk">${I.box}</div>
+      <div class="a-info">
+        <p>${i.name}</p>
+        ${i.orig ? `<p class="a-orig">${rp(i.orig)}</p>` : ""}
+        <div class="a-pr"><p class="a-price">${rp(i.price)}</p>${stepper(i)}</div>
+      </div>
+    </div>`;
+  }
+  function bagHTML(r, amount){
+    const inBag = items.filter(i => i.inBag);
+    const groups = groupBySeller(inBag);
+    const n = selected().length;
+    const allSel = inBag.length > 0 && inBag.every(i => i.sel);
+    return `<div class="app">
+      <header class="a-head">
+        <div class="a-head-top">
+          <span class="pill">Kirim ke: <b>Rumah</b>${I.down}</span>
+          <button type="button" class="icon-btn" aria-label="Wishlist" data-act="noop">${I.heart}</button>
+        </div>
+        <div class="tabs"><span class="tab on">Belanja (${inBag.length})</span><span class="tab">Langganan (0)</span></div>
+      </header>
+      <div class="scroll">
+        <div class="a-ship">${I.truck}<p>Yay, kamu hemat ongkir <b>Rp 90.000</b></p></div>
+        <section class="a-card">
+          <div class="a-wh"><input type="checkbox" class="a-cb-static" checked disabled aria-label="Dikirim oleh Blibli"><div><p class="t">Dikirim oleh Blibli</p><p class="s">Gudang Blibli, Kab. Bogor</p></div></div>
+          ${groups.length ? groups.map(g => `<div class="a-group"><p class="a-seller">${g.seller}</p>${g.items.map(bagItem).join("")}</div>`).join("") : `<p class="empty">Bag kamu kosong. Pilih kasus lagi buat reset.</p>`}
+          <div class="a-more"><div><p class="t">Butuh yang lain?</p><p class="s">Ada diskon terbatas dari gudang ini</p></div><button type="button" class="a-link" data-act="more">Tambah barang</button></div>
+        </section>
+      </div>
+      <div class="dock">
+        ${stripBag(r)}
+        <div class="dock-body">
+          <div class="promo"><span class="ok">${I.check}</span><span class="txt"><span class="ttl">2 promo &amp; 1 voucher ongkir dipakai</span><span class="chips"><span class="chip b">-Rp 350.000</span><span class="chip g">-Rp 90.000</span></span></span>${I.right}</div>
+          <div class="totalrow">
+            <label class="all"><input type="checkbox" class="a-cb-static" data-act="all" ${allSel ? "checked" : ""}><span>Semua</span></label>
+            <div class="tot"><span class="tl">Total ${I.up}</span><span class="tv">${rp(amount)}</span></div>
+            <button type="button" class="btn-primary" data-act="to-checkout" ${n ? "" : "disabled"}>Checkout (${n})</button>
+          </div>
+        </div>
+      </div>
+      <nav class="a-nav" aria-label="Navigasi aplikasi">
+        <span>${I.home}Beranda</span><span>${I.video}Video</span><span class="on">${I.bag}Bag</span><span>${I.order}Pesanan</span><span>${I.user}Akun</span>
+      </nav>
+    </div>`;
+  }
+
+  /* ---------- Checkout ---------- */
+  function coItem(i){
+    return `<div class="a-item">
+      <div class="a-thumb sm" role="img" aria-label="Foto produk">${I.box}</div>
+      <div class="a-info">
+        <p>${i.name}</p>
+        <span class="retur">Gratis retur</span>
+        <div class="a-pr"><p class="a-price">${rp(i.price)} <span class="per">/produk</span></p>${stepper(i)}</div>
+      </div>
+    </div>`;
+  }
+  function recoCard(i, r){
+    const closes = state.p2 && r.messageType === "gap" && i.price >= r.remainingSpend;
+    return `<div class="reco">
+      <div class="a-thumb sm" role="img" aria-label="Foto produk">${I.box}</div>
+      <div class="ri">
+        ${closes ? `<span class="tag">Cukup buat naik ke ${r.targetTier}</span>` : ""}
+        <span class="rn">${i.name}</span><span class="rp">${rp(i.price)}</span>
+      </div>
+      <button type="button" class="add" data-act="add" data-id="${i.id}" aria-label="Tambah ${i.name}">${I.plusL}</button>
+    </div>`;
+  }
+  function checkoutHTML(r, amount){
+    const sel = selected();
+    const groups = groupBySeller(sel);
+    const orig = origAmount();
+    const saving = Math.max(0, orig - amount);
+    const points = Math.floor(amount / 1000);
+    const reco = items.filter(i => i.reco && !i.inBag);
+    return `<div class="app">
+      <header class="c-head"><button type="button" class="back" data-act="to-bag" aria-label="Kembali ke Bag">${I.back}</button><h2>Checkout</h2></header>
+      <div class="scroll">
+        <div class="c-addr">${I.pin}<div><p class="t">Kantor, [Nama penerima]</p><p class="s">[Alamat pengiriman]</p></div>${I.right}</div>
+        ${groups.length ? groups.map(g => `<section class="a-card c-group"><div class="c-sh"><p class="t">${g.seller}</p><p class="s">${CITY[g.seller] || ""}</p></div>${g.items.map(coItem).join("")}</section>`).join("")
+          : `<section class="a-card"><p class="empty">Belum ada barang yang dipilih. Balik ke Bag buat pilih barang.</p></section>`}
+        <section class="a-card c-row">
+          <label class="vrow"><span class="vi">${I.ticket}</span><span class="vt"><b>Voucher toko</b><span class="s">Potongan Rp 100.000 dari total pesanan</span></span><input type="checkbox" data-act="voucher" ${state.voucher ? "checked" : ""}></label>
+        </section>
+        <section class="a-card c-row">
+          <div class="shipcard">
+            <div class="hd"><div class="r"><b>Metode pengiriman</b><span>Lihat semua</span></div><p class="green">Dapat voucher hingga Rp 100.000 kalau telat.</p></div>
+            <div class="opt on"><div class="r"><b style="flex:1">Same day</b><span class="strike">Rp 25.000</span><span class="free">Gratis</span><span class="radio on" aria-hidden="true"></span></div><p class="s">Dijamin tiba besok, 6 - 8 jam setelah diambil kurir.</p></div>
+            <div class="opt"><div class="r"><b>Instant</b><span class="fast">Tercepat</span><span style="flex:1"></span><span class="strike">Rp 30.600</span><span class="free">Rp 600</span><span class="radio" aria-hidden="true"></span></div><p class="s">Dijamin tiba besok, 3 - 4 jam setelah diambil kurir.</p></div>
+          </div>
+        </section>
+        <section class="a-card c-reco">
+          <p class="rt">Ada yang kurang? Tambah dari seller yang sama!</p>
+          ${reco.length ? `<div class="reco-row">${reco.map(i => recoCard(i, r)).join("")}</div>` : `<p class="reco-done">Semua rekomendasi sudah ditambahkan.</p>`}
+        </section>
+      </div>
+      <div class="dock">
+        ${stripCheckout(r, saving, points)}
+        <div class="c-total"><div><span class="orig">${rp(orig)}</span><span class="tv">Total ${rp(amount)}</span></div><button type="button" class="btn-primary" data-act="pay" ${sel.length ? "" : "disabled"}>${I.shield}Bayar</button></div>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- detail sheet ---------- */
+  function sheetHTML(r, amount){
+    const t = r.targetTier;
+    const rows = r.messageType === "unlock"
+      ? `<div class="sr"><span>Sudah terhitung tahun ini</span><b>${rp(state.counted)}</b></div>
+         <div class="sr"><span>Pesanan ini</span><b>${rp(amount)}</b></div>
+         <div class="sr ok"><span>Status</span><b>Syarat ${t} terpenuhi</b></div>`
+      : `<div class="sr"><span>Sudah terhitung tahun ini</span><b>${rp(state.counted)}</b></div>
+         <div class="sr"><span>Pesanan ini</span><b>${rp(amount)}</b></div>
+         <div class="sr"><span>Kurang</span><b>${rp(r.remainingSpend)}</b></div>`;
+    return `<div class="sheet-wrap" data-act="close-sheet">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">
+        <div class="grab"></div>
+        <h3 id="sh-t">Progres ke ${t}</h3>
+        ${rows}
+        <p class="note">Progres dihitung setelah pesanan diterima. Pesanan yang dibatalkan atau dikembalikan tidak dihitung.</p>
+        <button type="button" class="btn-primary block" data-act="close-sheet">Oke</button>
+      </div>
+    </div>`;
+  }
+
+  /* ---------- panel ---------- */
+  function stateText(r){
+    switch (r.kase) {
+      case "error": return "Neo timed out, so CECP hides the strip. The rest of the page works as usual.";
+      case "case4": return "Case 4: already Diamond, so nothing shows in MVP.";
+      case "case3": return `Case 3: gap after this order (${rp(r.remainingSpend)}) is above the ${PATH[r.targetTier]} cutoff (${rp(r.cutoff)}), so nothing shows.`;
+      case "case1": return `Case 1: gap after this order (${rp(r.remainingSpend)}) is within the ${PATH[r.targetTier]} cutoff (${rp(r.cutoff)}).`;
+      case "case2": return `Case 2: this order crosses the ${r.targetTier} spend threshold, so we ask them to complete it.`;
+      case "case6": return `Case 6: this order is the last transaction needed for ${r.targetTier}. The spend gap doesn’t matter here.`;
+      case "case5": return state.case5 === "A"
+        ? `Case 5 [OPEN], option A: this order reaches ${r.reached} and leaves ${rp(r.gapNext)} to ${r.next} (within its cutoff). Option A shows the ${r.reached} unlock.`
+        : `Case 5 [OPEN], option B: this order reaches ${r.reached} and leaves ${rp(r.gapNext)} to ${r.targetTier}. Option B shows the gap to ${r.targetTier} instead.`;
+    }
+    return "";
+  }
+  function neoResponse(r){
+    if (r.messageType === "error") return {error:"TIMEOUT", note:"No response in time. CECP hides the strip."};
+    if (r.messageType === "none") return {messageType:"none"};
+    return {messageType:r.messageType, targetTier:r.targetTier, remainingSpend:Math.round(r.remainingSpend),
+            progressCounted:r.progressCounted, progressThisOrder:r.progressThisOrder};
+  }
+  function renderPanel(r, amount){
+    document.querySelectorAll("#scen .sc").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === state.scenario)));
+    const s = SCEN.find(x => x.id === state.scenario);
+    $("#hint").textContent = s ? s.hint : "Custom setup. Pick a case to reset the cart.";
+    const target = r.targetTier;
+    $("#cut-body").innerHTML = ["Gold","Platinum","Diamond"].map(t =>
+      `<tr class="${t === target && r.kase !== "case4" && r.kase !== "error" ? "on" : ""}"><td>${PATH[t]}</td><td>${rp(MEDIAN[t])}</td><td>≤${rp(cutoffFor(t))}</td></tr>`).join("");
+    $("#neo-req").textContent = JSON.stringify({memberId:"BLI-1234567", page:state.page, orderAmount:amount}, null, 2);
+    $("#neo-res").textContent = JSON.stringify(neoResponse(r), null, 2);
+    $("#state").textContent = stateText(r);
+    document.querySelectorAll("#seg-page button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.page === state.page)));
+    document.querySelectorAll("#seg-n button").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.n === state.N)));
+    document.querySelectorAll("#seg-c5 button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c5 === state.case5)));
+    $("#f-factor-out").textContent = num(state.factor);
+  }
+
+  /* ---------- render ---------- */
+  const app = $("#app"), toastEl = $("#toast");
+  let lastPage = null, sheetJustOpened = false, toastTimer;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
+  }
+  function renderAll(){
+    const amount = state.page === "bag" ? bagAmount() : checkoutAmount();
+    const r = evaluate(amount);
+    if (state.sheet && !shows(r)) state.sheet = false;
+    const sc = app.querySelector(".scroll");
+    const top = sc ? sc.scrollTop : 0;
+    app.innerHTML = (state.page === "bag" ? bagHTML(r, amount) : checkoutHTML(r, amount)) + (state.sheet ? sheetHTML(r, amount) : "");
+    const sc2 = app.querySelector(".scroll");
+    if (sc2 && lastPage === state.page) sc2.scrollTop = top;
+    lastPage = state.page;
+    if (state.sheet && sheetJustOpened) { const b = app.querySelector(".sheet .btn-primary"); if (b) b.focus({preventScroll:true}); sheetJustOpened = false; }
+    renderPanel(r, amount);
+  }
+  function syncInputs(){
+    $("#f-tier").value = state.tier;
+    $("#f-counted").value = num(state.counted);
+    $("#f-trx").value = state.trx;
+    $("#f-factor").value = state.factor;
+    $("#f-p2").checked = state.p2;
+    $("#f-timeout").checked = state.timeout;
+  }
+  function applyScenario(id){
+    const s = SCEN.find(x => x.id === id);
+    Object.assign(state, {scenario:id, tier:s.tier, counted:s.counted, trx:s.trx, timeout:!!s.timeout, voucher:false, sheet:false, page:"bag"});
+    resetItems(s.sel);
+    syncInputs();
+    renderAll();
+  }
+  const markCustom = () => { state.scenario = "custom"; };
+
+  /* ---------- events: panel ---------- */
+  $("#scen").innerHTML = SCEN.map(s => `<button type="button" class="sc" data-s="${s.id}" aria-pressed="false"><span class="sc-case">${s.c}</span><span class="sc-l">${s.l}</span></button>`).join("");
+  $("#scen").addEventListener("click", e => { const b = e.target.closest(".sc"); if (b) applyScenario(b.dataset.s); });
+  $("#f-tier").addEventListener("change", e => { state.tier = e.target.value; markCustom(); renderAll(); });
+  $("#f-counted").addEventListener("input", e => {
+    const v = parseInt(e.target.value.replace(/\D/g, ""), 10);
+    state.counted = isNaN(v) ? 0 : v; markCustom(); renderAll();
+  });
+  $("#f-counted").addEventListener("blur", e => { e.target.value = num(state.counted); });
+  $("#f-trx").addEventListener("input", e => { const v = parseInt(e.target.value, 10); state.trx = isNaN(v) ? 0 : Math.max(0, v); markCustom(); renderAll(); });
+  $("#seg-n").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { state.N = +b.dataset.n; renderAll(); } });
+  $("#f-factor").addEventListener("input", e => { state.factor = Math.round(parseFloat(e.target.value) * 10) / 10; renderAll(); });
+  $("#seg-c5").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { state.case5 = b.dataset.c5; renderAll(); } });
+  $("#f-p2").addEventListener("change", e => { state.p2 = e.target.checked; renderAll(); });
+  $("#f-timeout").addEventListener("change", e => { state.timeout = e.target.checked; markCustom(); renderAll(); });
+  $("#seg-page").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { state.page = b.dataset.page; state.sheet = false; renderAll(); } });
+
+  /* ---------- events: phone ---------- */
+  const find = id => items.find(i => i.id === id);
+  app.addEventListener("click", e => {
+    const el = e.target.closest("[data-act]");
+    if (!el || el.tagName === "INPUT") return;
+    const act = el.dataset.act, it = el.dataset.id ? find(el.dataset.id) : null;
+    switch (act) {
+      case "plus": it.qty++; break;
+      case "minus":
+        if (it.qty > 1) it.qty--;
+        else { it.inBag = false; it.sel = false; toast("Barang dihapus dari bag"); }
+        break;
+      case "more": toast("Di app asli, ini buka rekomendasi dari gudang yang sama."); return;
+      case "to-checkout": state.page = "checkout"; state.sheet = false; break;
+      case "to-bag": state.page = "bag"; state.sheet = false; break;
+      case "add": it.inBag = true; it.sel = true; it.qty = 1; toast(`${it.name} ditambahkan`); break;
+      case "sheet": state.sheet = true; sheetJustOpened = true; break;
+      case "close-sheet":
+        if (el.classList.contains("sheet-wrap") && e.target !== el) return;
+        state.sheet = false; break;
+      case "pay": toast("Pesanan dibuat (demo). Progres tier dihitung setelah pesanan diterima."); return;
+      default: return;
+    }
+    renderAll();
+  });
+  app.addEventListener("change", e => {
+    const el = e.target;
+    if (!el.dataset.act) return;
+    if (el.dataset.act === "sel") { find(el.dataset.id).sel = el.checked; }
+    else if (el.dataset.act === "all") { items.filter(i => i.inBag).forEach(i => { i.sel = el.checked; }); }
+    else if (el.dataset.act === "voucher") { state.voucher = el.checked; }
+    renderAll();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && state.sheet) { state.sheet = false; renderAll(); } });
+
+  applyScenario("s1");
+})();
+</script>
+</body>
+</html>
